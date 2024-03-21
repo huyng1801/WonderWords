@@ -1,0 +1,208 @@
+<html>
+<head>
+  <title>Wonder Words Game</title>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <style>
+        body {
+      background-image: radial-gradient(circle at 30% 86%, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.03) 8%,transparent 8%, transparent 92%),radial-gradient(circle at 55% 100%, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.03) 8%,transparent 8%, transparent 92%),radial-gradient(circle at 40% 75%, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.03) 6%,transparent 6%, transparent 94%),radial-gradient(circle at 7% 99%, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.03) 6%,transparent 6%, transparent 94%),radial-gradient(circle at 69% 76%, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.03) 6%,transparent 6%, transparent 94%),radial-gradient(circle at 2% 35%, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.03) 6%,transparent 6%, transparent 94%),radial-gradient(circle at 14% 48%, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.03) 6%,transparent 6%, transparent 94%),radial-gradient(circle at 28% 87%, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.04) 4%,transparent 4%, transparent 96%),radial-gradient(circle at 65% 14%, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.04) 4%,transparent 4%, transparent 96%),radial-gradient(circle at 51% 36%, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.04) 4%,transparent 4%, transparent 96%),radial-gradient(circle at 6% 93%, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.04) 4%,transparent 4%, transparent 96%),linear-gradient(135deg, rgb(23, 233, 173),rgb(29, 24, 208));
+      height: 100vh;
+    }
+    .container {
+      position: relative;
+      top: 40%;
+      transform: translateY(-50%);
+    }
+    .card {
+      background-color: rgba(0,0,0,0.3);
+      padding: 20px;
+      color: white;
+    }
+    .word {
+      font-size: 24px;
+      margin-bottom: 20px;
+      font-family: monospace;
+    }
+    .description {
+      margin-bottom: 20px;
+    }
+    .message {
+      margin-top: 20px;
+    }
+    .countdown {
+      font-weight: bold;
+    }
+    .scores {
+      margin-top: 20px;
+    }
+    .name-form {
+      margin-bottom: 10px;
+      margin-left: 50%;
+      transform: translateX(-50%);
+    }
+    .game-container {
+      display: none;
+    }
+    .player-list {
+      list-style-type: none;
+      padding: 0;
+      margin-top: 20px;
+    }
+    .player-list li {
+      margin-bottom: 5px;
+    }
+    .player-list .player-name {
+      font-weight: bold;
+    }
+    .player-list .player-status {
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+  <div class="container shadow-lg p-4 mb-4">
+    <div class="card">
+      <form class="name-form shadow-lg p-4 my-4">
+        <div class="text-center">
+          <h2>Welcome to Wonder Words!</h2>
+        </div>
+        <div class="form-group">
+          <label for="player-name" class="my-3">Enter Your Name:</label>
+          <input type="text" class="form-control player-name-input my-3" id="player-name" placeholder="Enter your name" required>
+        </div>
+        <button type="submit" class="btn btn-primary name-submit-button my-3">Submit</button>
+      </form>
+      <div class="game-container">
+        <div class="row">
+          <div class="col-sm-6">
+            <h2>Hint:</h2>
+            <div class="word"></div>
+            <h2>Description:</h2>
+            <div class="description"></div>
+            <div class="countdown"></div>
+            <button class="btn btn-primary ready-button my-3">Ready</button>
+            <input type="text" class="form-control guess-input my-3" placeholder="Enter a character" maxlength="1" required>
+            <button class="btn btn-primary guess-button my-3" disabled>Guess</button>
+            <div class="message"></div>
+          </div>
+          <div class="col-sm-6" style="background-color: rgba(0,0,0,0.4); border-radius: 10px;">
+            <h4>Dashboard</h4>
+            <ul class="player-list">
+            </ul>
+        </div>
+        </div>
+      </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.2.0/socket.io.js"></script>
+  <script>
+    
+    $(document).ready(() => {
+      const socket = io.connect('http://localhost:5000');
+      let wordInitialized = false;
+
+      socket.on('connect', () => {
+        console.log('Connected to server');
+      });
+
+      $('.name-form').submit((e) => {
+      e.preventDefault();
+      const playerName = $('.player-name-input').val().trim();
+      if (playerName) {
+        socket.emit('player_name', { name: playerName });
+        $('.name-form').hide();
+        $('.game-container').show();
+      }
+    });
+      socket.on('message', (data) => {
+        const  message  = data.message;
+        $('.message').text(message);
+      });
+      socket.on('reveal', (data) => {
+        const revealedWord = data.revealed_word.join('');
+        $('.word').text(revealedWord);
+
+        if (!wordInitialized) {
+          wordInitialized = true;
+          $('.word').text(revealedWord.replace(/-/g, '-').replace(/\s/g, '\u00A0'));
+        }
+      });
+
+      socket.on('word', (data) => {
+        $('.word').text('');
+        $('.description').text(data.description);
+      });
+
+      socket.on('countdown', (data) => {
+        $('.countdown').text(`Turn countdown: ${data.time} seconds`);
+      });
+
+      socket.on('again', (data) => {
+        const message = data.message;
+        console.log(message);
+        if (message === 'again') {
+          $('.guess-button').prop('disabled', false);
+        }
+      });
+
+      socket.on('hint', (data) => {
+        const hint = data.hint.replace(/-/g, '-').replace(/\s/g, '\u00A0');
+        $('.word').text(hint);
+      });
+
+        socket.on('message', (data) => {
+          const message = data.message;
+          if (message === 'Wrong guess!') {
+            $('.guess-button').prop('disabled', true);
+          }
+        });
+
+      socket.on('player_list', (data) => {
+      const players = data.players;
+      $('.player-list').empty();
+      $('.player-list').append(`<li>
+    <div class="row">
+      <div class="col-sm-4"><span class="player-name">Name</span></div>
+      <div class="col-sm-4"><span class="player-score">Score</span></div>
+      <div class="col-sm-4"><span class="player-status">Status</span></div>
+    </div></li>
+`);
+    players.forEach((player) => {
+        const { player_id, name, score, is_ready } = player;
+        const status = is_ready ? 'Ready' : 'Not Ready';
+        $('.player-list').append(`<li>
+  <div class="row">
+    <div class="col-sm-4 player-name">${name}</div>
+    <div class="col-sm-4 player-score">${score}</div>
+    <div class="col-sm-4 player-status">${status}</div>
+  </div></li>
+`);
+
+    });
+});
+
+
+   $('.ready-button').click(() => {
+        socket.emit('ready');
+        $('.ready-button').prop('disabled', true);
+        $('.guess-button').prop('disabled', false);
+        $('.message').text('Please wait for all players to be ready!');
+      });   
+      socket.on('end_game', (data) => {
+        const hint = data.message;
+        $('.ready-button').prop('disabled', false);
+        $('.guess-button').prop('disabled', true);
+      });
+      $('.guess-button').click(() => {
+        const guess = $('.guess-input').val().trim();
+        if (guess) {
+          socket.emit('guess', { guess });
+        }
+        $('.guess-input').val(''); 
+      });
+    });
+  </script>
+
+</body>
+</html>
